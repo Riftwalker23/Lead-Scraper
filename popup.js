@@ -173,8 +173,9 @@ function refreshPills() {
   $("filtered-pill").textContent = filtered.length;
   renderPreview(filtered);
 
-  // Update the enrich button with how many filtered leads still need data.
-  const pending = filtered.filter(
+  // Update the enrich button with how many scraped leads still need data
+  // (based on the full set, since enrichment runs before phone/website filters).
+  const pending = allLeads.filter(
     (l) => /\/maps\/place\//.test(l.mapsUrl || "") && (!l.phone || !l.website)
   ).length;
   const btn = $("enrich");
@@ -489,19 +490,14 @@ async function doScrape() {
     $("result").classList.remove("hidden");
     chrome.storage.local.set({ lastLeads: allLeads });
 
-    // Phone & website aren't in Maps' list — fetch them automatically for
-    // smaller result sets; for large ones, guide the user to filter first.
+    // Phone & website aren't in Maps' list. Fetch them for ALL scraped leads
+    // (must happen before filtering by phone/website). Only 3 tabs open at a
+    // time, so even big lists are safe — they just take a few minutes.
     const needEnrich = allLeads.filter(
       (l) => /\/maps\/place\//.test(l.mapsUrl || "") && (!l.phone || !l.website)
     ).length;
-    if ($("opt-enrich").checked && needEnrich) {
-      if (needEnrich <= 40) {
-        runEnrich(allLeads);
-      } else {
-        setStatus(
-          `Scraped ${allLeads.length}. That's a lot to enrich — filter down first, then click 📞 Get phone & website (fetching phone/website opens each listing briefly).`
-        );
-      }
+    if (needEnrich && $("opt-enrich").checked) {
+      runEnrich(allLeads);
     } else if (needEnrich) {
       setStatus(
         `Scraped ${allLeads.length}. Phone & website are blank — click 📞 Get phone & website to fetch them.`
@@ -541,7 +537,13 @@ async function runEnrich(leads) {
     "working"
   );
   const { filled, failed } = await enrichLeads(leads, (done, total) => {
-    setStatus(`Fetching phone & website… ${done}/${total} listings checked.`, "working");
+    setStatus(
+      `Fetching phone & website… ${done}/${total} listings checked. Keep this popup open.`,
+      "working"
+    );
+    // Update the preview live and persist partial progress every few leads.
+    refreshPills();
+    if (done % 5 === 0) chrome.storage.local.set({ lastLeads: allLeads });
   });
   btn.disabled = false;
   refreshPills();
@@ -555,7 +557,9 @@ async function runEnrich(leads) {
   );
 }
 
-$("enrich").addEventListener("click", () => runEnrich(getFilteredLeads()));
+// Always enrich the full scraped set — so filters like "Has phone" work
+// afterwards (you can't filter by data you haven't fetched yet).
+$("enrich").addEventListener("click", () => runEnrich(allLeads));
 
 $("docs").addEventListener("click", async () => {
   const leads = getFilteredLeads();
