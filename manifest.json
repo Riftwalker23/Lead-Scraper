@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Maps Lead Scraper",
+  "version": "1.0.0",
+  "description": "Scrape business leads (name, phone, website, rating, reviews, address) from Google Maps search results with smart filters, then copy to a Google Sheet in one click.",
+  "permissions": ["scripting", "activeTab", "tabs", "clipboardWrite", "storage"],
+  "host_permissions": [
+    "https://www.google.com/*",
+    "https://www.google.*/maps/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Maps Lead Scraper",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.google.*/maps/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

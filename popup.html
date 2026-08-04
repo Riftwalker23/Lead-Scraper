@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="popup.css" />
+    <title>Maps Lead Scraper</title>
+  </head>
+  <body>
+    <header class="head">
+      <div class="brand">
+        <div class="logo">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z"
+            />
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Lead Scraper</h1>
+          <p class="sub">Filter &amp; export Maps leads</p>
+        </div>
+      </div>
+      <span id="dot" class="dot" title="Status"></span>
+    </header>
+
+    <div class="scroll">
+      <section class="card filters">
+        <div class="card-title">
+          <span>Filters</span>
+          <button id="reset" class="link-btn" type="button">Reset</button>
+        </div>
+
+        <label class="toggle-row" for="f-phone">
+          <span class="tr-icon">📞</span>
+          <span class="tr-text">
+            <b>Has phone number</b>
+            <small>Only businesses with a listed phone</small>
+          </span>
+          <span class="switch">
+            <input type="checkbox" id="f-phone" />
+            <span class="slider"></span>
+          </span>
+        </label>
+
+        <label class="toggle-row" for="f-website">
+          <span class="tr-icon">🌐</span>
+          <span class="tr-text">
+            <b>Has website</b>
+            <small>Only businesses that link a site</small>
+          </span>
+          <span class="switch">
+            <input type="checkbox" id="f-website" />
+            <span class="slider"></span>
+          </span>
+        </label>
+
+        <label class="toggle-row" for="f-nowebsite">
+          <span class="tr-icon">🚫</span>
+          <span class="tr-text">
+            <b>No website</b>
+            <small>Perfect for web-design outreach</small>
+          </span>
+          <span class="switch">
+            <input type="checkbox" id="f-nowebsite" />
+            <span class="slider"></span>
+          </span>
+        </label>
+
+        <label class="toggle-row" for="f-open">
+          <span class="tr-icon">🟢</span>
+          <span class="tr-text">
+            <b>Open now</b>
+            <small>Only businesses currently open</small>
+          </span>
+          <span class="switch">
+            <input type="checkbox" id="f-open" />
+            <span class="slider"></span>
+          </span>
+        </label>
+
+        <label class="toggle-row" for="f-reviews">
+          <span class="tr-icon">⭐</span>
+          <span class="tr-text">
+            <b>Minimum reviews</b>
+            <small>Filter out low-traction listings</small>
+          </span>
+          <span class="tr-controls">
+            <input type="number" id="f-reviews-min" min="0" value="100" class="num" />
+            <span class="switch">
+              <input type="checkbox" id="f-reviews" />
+              <span class="slider"></span>
+            </span>
+          </span>
+        </label>
+
+        <label class="toggle-row" for="f-rating">
+          <span class="tr-icon">🏆</span>
+          <span class="tr-text">
+            <b>Minimum rating</b>
+            <small>Only well-rated businesses</small>
+          </span>
+          <span class="tr-controls">
+            <input type="number" id="f-rating-min" min="0" max="5" step="0.1" value="4" class="num" />
+            <span class="switch">
+              <input type="checkbox" id="f-rating" />
+              <span class="slider"></span>
+            </span>
+          </span>
+        </label>
+
+        <label class="toggle-row" for="f-maxreviews">
+          <span class="tr-icon">📉</span>
+          <span class="tr-text">
+            <b>Maximum reviews</b>
+            <small>Under-marketed / newer businesses</small>
+          </span>
+          <span class="tr-controls">
+            <input type="number" id="f-maxreviews-val" min="0" value="50" class="num" />
+            <span class="switch">
+              <input type="checkbox" id="f-maxreviews" />
+              <span class="slider"></span>
+            </span>
+          </span>
+        </label>
+
+        <label class="toggle-row" for="f-maxrating">
+          <span class="tr-icon">👎</span>
+          <span class="tr-text">
+            <b>Maximum rating</b>
+            <small>Low-rated — reputation leads</small>
+          </span>
+          <span class="tr-controls">
+            <input type="number" id="f-maxrating-val" min="0" max="5" step="0.1" value="3.5" class="num" />
+            <span class="switch">
+              <input type="checkbox" id="f-maxrating" />
+              <span class="slider"></span>
+            </span>
+          </span>
+        </label>
+
+        <label class="toggle-row" for="f-cat">
+          <span class="tr-icon">🏷️</span>
+          <span class="tr-text">
+            <b>Category includes</b>
+            <small>Keep only matching categories</small>
+          </span>
+          <span class="tr-controls">
+            <input type="text" id="f-cat-val" placeholder="e.g. gym" class="num text" />
+            <span class="switch">
+              <input type="checkbox" id="f-cat" />
+              <span class="slider"></span>
+            </span>
+          </span>
+        </label>
+
+        <label class="toggle-row" for="f-nosponsored">
+          <span class="tr-icon">📢</span>
+          <span class="tr-text">
+            <b>Hide sponsored</b>
+            <small>Drop paid "Ad" listings</small>
+          </span>
+          <span class="switch">
+            <input type="checkbox" id="f-nosponsored" />
+            <span class="slider"></span>
+          </span>
+        </label>
+      </section>
+
+      <button id="scrape" class="btn primary big">
+        <svg class="btn-ic" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5Zm-6 0A4.5 4.5 0 1 1 14 9.5 4.49 4.49 0 0 1 9.5 14Z"/>
+        </svg>
+        <span class="btn-label">Scrape leads</span>
+      </button>
+
+      <div class="row-between">
+        <label class="mini-row" for="opt-autoscroll">
+          <span class="switch sm">
+            <input type="checkbox" id="opt-autoscroll" checked />
+            <span class="slider"></span>
+          </span>
+          <span>Auto-scroll to load all results</span>
+        </label>
+        <button id="demo" class="link-btn" type="button">▶ Try demo</button>
+      </div>
+
+      <section id="status" class="status hidden"></section>
+
+      <section id="result" class="card result hidden">
+        <div class="stats">
+          <div class="stat">
+            <span id="count-pill" class="stat-num">0</span>
+            <span class="stat-label">scraped</span>
+          </div>
+          <div class="stat accent">
+            <span id="filtered-pill" class="stat-num">0</span>
+            <span class="stat-label">after filters</span>
+          </div>
+        </div>
+
+        <div id="preview" class="preview"></div>
+
+        <div class="btn-grid">
+          <button id="copy" class="btn">
+            <span class="btn-ic-emoji">📋</span> Copy
+          </button>
+          <button id="sheet" class="btn success">
+            <span class="btn-ic-emoji">📊</span> Google Sheet
+          </button>
+        </div>
+        <button id="csv" class="btn ghost">⬇️ Download CSV</button>
+
+        <p class="hint">
+          <b>Google Sheet</b> opens a new sheet with leads already copied —
+          click <b>A1</b> and press <b>Ctrl&nbsp;+&nbsp;V</b>.
+        </p>
+      </section>
+    </div>
+
+    <footer class="foot">
+      Run a <b>google.com/maps</b> search, then scrape.
+    </footer>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
