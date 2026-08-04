@@ -172,22 +172,6 @@ function refreshPills() {
   $("count-pill").textContent = allLeads.length;
   $("filtered-pill").textContent = filtered.length;
   renderPreview(filtered);
-
-  // Update the enrich button with how many scraped leads still need data
-  // (based on the full set, since enrichment runs before phone/website filters).
-  const pending = allLeads.filter(
-    (l) => /\/maps\/place\//.test(l.mapsUrl || "") && (!l.phone || !l.website)
-  ).length;
-  const btn = $("enrich");
-  if (btn) {
-    btn.querySelector(".btn-label")
-      ? (btn.querySelector(".btn-label").textContent = pending
-          ? `Get phone & website (${pending})`
-          : "Phone & website ✓")
-      : null;
-    btn.classList.toggle("pending", pending > 0);
-    btn.classList.toggle("done", pending === 0);
-  }
 }
 
 async function copyLeads(leads) {
@@ -439,8 +423,16 @@ async function ensureContentScript(tabId) {
   }
 }
 
-async function doScrape() {
+// Disable the Scrape button and show a spinner while scraping/fetching.
+function setBusy(on, label) {
   const btn = $("scrape");
+  btn.disabled = on;
+  btn.classList.toggle("loading", on);
+  const lbl = btn.querySelector(".btn-label");
+  if (lbl) lbl.textContent = on ? label || "Working…" : "Scrape leads";
+}
+
+async function doScrape() {
   const tab = await getActiveTab();
 
   if (!isMapsUrl(tab.url)) {
@@ -451,23 +443,22 @@ async function doScrape() {
     return;
   }
 
-  btn.disabled = true;
+  setBusy(true, "Scraping…");
   $("result").classList.add("hidden");
   setStatus("Loading & scrolling results… this can take a moment.", "working");
 
   const ready = await ensureContentScript(tab.id);
   if (!ready) {
     setStatus("Couldn't start the scraper on this tab. Reload the page and retry.", "error");
-    btn.disabled = false;
+    setBusy(false);
     return;
   }
 
   const autoScroll = $("opt-autoscroll").checked;
 
   chrome.tabs.sendMessage(tab.id, { type: "SCRAPE", autoScroll }, (resp) => {
-    btn.disabled = false;
-
     if (chrome.runtime.lastError) {
+      setBusy(false);
       setStatus(
         "Scraper didn't respond. Reload the Maps tab and try again.",
         "error"
@@ -475,12 +466,14 @@ async function doScrape() {
       return;
     }
     if (!resp || !resp.ok) {
+      setBusy(false);
       setStatus((resp && resp.error) || "Scrape failed.", "error");
       return;
     }
 
     allLeads = resp.data || [];
     if (allLeads.length === 0) {
+      setBusy(false);
       setStatus("No leads found on this page.", "error");
       return;
     }
@@ -497,11 +490,14 @@ async function doScrape() {
       (l) => /\/maps\/place\//.test(l.mapsUrl || "") && (!l.phone || !l.website)
     ).length;
     if (needEnrich && $("opt-enrich").checked) {
-      runEnrich(allLeads);
-    } else if (needEnrich) {
-      setStatus(
-        `Scraped ${allLeads.length}. Phone & website are blank — click 📞 Get phone & website to fetch them.`
-      );
+      runEnrich(allLeads); // manages the busy state itself
+    } else {
+      setBusy(false);
+      if (needEnrich) {
+        setStatus(
+          `Scraped ${allLeads.length}. Turn on "Auto-fetch phone & website" and scrape again to fill those columns.`
+        );
+      }
     }
   });
 }
@@ -527,11 +523,10 @@ async function runEnrich(leads) {
     (l) => /\/maps\/place\//.test(l.mapsUrl || "") && (!l.phone || !l.website)
   );
   if (!todo.length) {
-    setStatus("These leads already have phone & website (or no Maps link).");
+    setBusy(false);
     return;
   }
-  const btn = $("enrich");
-  btn.disabled = true;
+  setBusy(true, "Fetching phone & website…");
   setStatus(
     `Fetching phone & website for ${todo.length} leads… opening each listing briefly. Keep this popup open.`,
     "working"
@@ -545,7 +540,7 @@ async function runEnrich(leads) {
     refreshPills();
     if (done % 5 === 0) chrome.storage.local.set({ lastLeads: allLeads });
   });
-  btn.disabled = false;
+  setBusy(false);
   refreshPills();
   chrome.storage.local.set({ lastLeads: allLeads });
   const noneListed = failed > 0 ? ` ${failed} had none listed on Google.` : "";
@@ -556,10 +551,6 @@ async function runEnrich(leads) {
     filled > 0 ? "" : "error"
   );
 }
-
-// Always enrich the full scraped set — so filters like "Has phone" work
-// afterwards (you can't filter by data you haven't fetched yet).
-$("enrich").addEventListener("click", () => runEnrich(allLeads));
 
 $("docs").addEventListener("click", async () => {
   const leads = getFilteredLeads();

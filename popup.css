@@ -576,41 +576,34 @@ h1 {
   color: var(--muted);
 }
 
-.btn.enrich {
-  width: 100%;
-  margin-bottom: 9px;
-  background: linear-gradient(145deg, #7c3aed, #6d28d9);
-  border-color: transparent;
-  box-shadow: 0 5px 14px rgba(109, 40, 217, 0.35);
+/* Spinner shown on the Scrape button while working */
+.spinner {
+  display: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
 }
 
-.btn.enrich:hover {
-  background: linear-gradient(145deg, #8b48f5, #7530e0);
+.btn.loading .spinner {
+  display: inline-block;
 }
 
-.btn.enrich:disabled {
-  opacity: 0.6;
+.btn.loading .btn-ic {
+  display: none;
+}
+
+.btn.primary:disabled,
+.btn.loading {
   cursor: progress;
 }
 
-.btn.enrich.pending {
-  animation: enrichPulse 1.8s ease-in-out infinite;
-}
-
-.btn.enrich.done {
-  background: var(--card-2);
-  border-color: var(--border);
-  box-shadow: none;
-  color: var(--muted);
-}
-
-@keyframes enrichPulse {
-  0%,
-  100% {
-    box-shadow: 0 5px 14px rgba(109, 40, 217, 0.35);
-  }
-  50% {
-    box-shadow: 0 5px 22px rgba(124, 58, 237, 0.85);
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
