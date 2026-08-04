@@ -175,13 +175,21 @@
         <span class="btn-label">Scrape leads</span>
       </button>
 
+      <label class="mini-row" for="opt-autoscroll">
+        <span class="switch sm">
+          <input type="checkbox" id="opt-autoscroll" checked />
+          <span class="slider"></span>
+        </span>
+        <span>Auto-scroll to load all results</span>
+      </label>
+
       <div class="row-between">
-        <label class="mini-row" for="opt-autoscroll">
+        <label class="mini-row" for="opt-enrich">
           <span class="switch sm">
-            <input type="checkbox" id="opt-autoscroll" checked />
+            <input type="checkbox" id="opt-enrich" checked />
             <span class="slider"></span>
           </span>
-          <span>Auto-scroll to load all results</span>
+          <span>Auto-fetch phone &amp; website</span>
         </label>
         <button id="demo" class="link-btn" type="button">▶ Try demo</button>
       </div>
@@ -203,7 +211,8 @@
         <div id="preview" class="preview"></div>
 
         <button id="enrich" class="btn enrich">
-          <span class="btn-ic-emoji">📞</span> Get phone &amp; website
+          <span class="btn-ic-emoji">📞</span>
+          <span class="btn-label">Get phone &amp; website</span>
         </button>
 
         <div class="btn-grid">

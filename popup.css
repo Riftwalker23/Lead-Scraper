@@ -593,6 +593,27 @@ h1 {
   cursor: progress;
 }
 
+.btn.enrich.pending {
+  animation: enrichPulse 1.8s ease-in-out infinite;
+}
+
+.btn.enrich.done {
+  background: var(--card-2);
+  border-color: var(--border);
+  box-shadow: none;
+  color: var(--muted);
+}
+
+@keyframes enrichPulse {
+  0%,
+  100% {
+    box-shadow: 0 5px 14px rgba(109, 40, 217, 0.35);
+  }
+  50% {
+    box-shadow: 0 5px 22px rgba(124, 58, 237, 0.85);
+  }
+}
+
 .btn-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

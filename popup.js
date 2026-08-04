@@ -172,6 +172,21 @@ function refreshPills() {
   $("count-pill").textContent = allLeads.length;
   $("filtered-pill").textContent = filtered.length;
   renderPreview(filtered);
+
+  // Update the enrich button with how many filtered leads still need data.
+  const pending = filtered.filter(
+    (l) => /\/maps\/place\//.test(l.mapsUrl || "") && (!l.phone || !l.website)
+  ).length;
+  const btn = $("enrich");
+  if (btn) {
+    btn.querySelector(".btn-label")
+      ? (btn.querySelector(".btn-label").textContent = pending
+          ? `Get phone & website (${pending})`
+          : "Phone & website ✓")
+      : null;
+    btn.classList.toggle("pending", pending > 0);
+    btn.classList.toggle("done", pending === 0);
+  }
 }
 
 async function copyLeads(leads) {
@@ -310,38 +325,52 @@ async function enrichLeads(leads, onProgress) {
     (l) => /\/maps\/place\//.test(l.mapsUrl || "") && (!l.phone || !l.website)
   );
   const total = queue.length;
-  if (!total) return { total: 0 };
+  if (!total) return { total: 0, filled: 0, failed: 0 };
   let done = 0;
+  let filled = 0;
+  let failed = 0;
   const concurrency = Math.min(3, total);
+
+  async function scrapeOnce(tabId) {
+    const res = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: scrapePlaceInTab,
+    });
+    return res && res[0] && res[0].result;
+  }
 
   async function worker() {
     while (queue.length) {
       const lead = queue.shift();
+      let got = false;
       try {
         const tab = await chrome.tabs.create({ url: lead.mapsUrl, active: false });
-        await waitForTabComplete(tab.id, 15000);
-        const res = await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          func: scrapePlaceInTab,
-        });
-        const data = res && res[0] && res[0].result;
+        await waitForTabComplete(tab.id, 20000);
+        let data = await scrapeOnce(tab.id);
+        // Retry once if the panel wasn't ready yet.
+        if (!data || (!data.phone && !data.website && !data.address)) {
+          await new Promise((r) => setTimeout(r, 1800));
+          data = await scrapeOnce(tab.id);
+        }
         if (data) {
           if (data.phone) lead.phone = data.phone;
           if (data.website) lead.website = data.website;
           if (data.address) lead.address = data.address;
           if (data.category && !lead.category) lead.category = data.category;
+          got = !!(data.phone || data.website);
         }
         await chrome.tabs.remove(tab.id).catch(() => {});
       } catch (e) {
         /* skip this lead */
       }
+      got ? filled++ : failed++;
       done++;
       if (onProgress) onProgress(done, total);
     }
   }
 
   await Promise.all(Array.from({ length: concurrency }, worker));
-  return { total };
+  return { total, filled, failed };
 }
 
 // Copy leads as a rich HTML table (pastes as a real table in Docs/Sheets).
@@ -459,6 +488,25 @@ async function doScrape() {
     refreshPills();
     $("result").classList.remove("hidden");
     chrome.storage.local.set({ lastLeads: allLeads });
+
+    // Phone & website aren't in Maps' list — fetch them automatically for
+    // smaller result sets; for large ones, guide the user to filter first.
+    const needEnrich = allLeads.filter(
+      (l) => /\/maps\/place\//.test(l.mapsUrl || "") && (!l.phone || !l.website)
+    ).length;
+    if ($("opt-enrich").checked && needEnrich) {
+      if (needEnrich <= 40) {
+        runEnrich(allLeads);
+      } else {
+        setStatus(
+          `Scraped ${allLeads.length}. That's a lot to enrich — filter down first, then click 📞 Get phone & website (fetching phone/website opens each listing briefly).`
+        );
+      }
+    } else if (needEnrich) {
+      setStatus(
+        `Scraped ${allLeads.length}. Phone & website are blank — click 📞 Get phone & website to fetch them.`
+      );
+    }
   });
 }
 
@@ -478,8 +526,7 @@ $("copy").addEventListener("click", async () => {
   );
 });
 
-$("enrich").addEventListener("click", async () => {
-  const leads = getFilteredLeads();
+async function runEnrich(leads) {
   const todo = leads.filter(
     (l) => /\/maps\/place\//.test(l.mapsUrl || "") && (!l.phone || !l.website)
   );
@@ -490,17 +537,25 @@ $("enrich").addEventListener("click", async () => {
   const btn = $("enrich");
   btn.disabled = true;
   setStatus(
-    `Fetching phone & website for ${todo.length} leads… opening listings in the background. Keep this popup open.`,
+    `Fetching phone & website for ${todo.length} leads… opening each listing briefly. Keep this popup open.`,
     "working"
   );
-  await enrichLeads(leads, (done, total) => {
-    setStatus(`Fetching phone & website… ${done}/${total} done.`, "working");
+  const { filled, failed } = await enrichLeads(leads, (done, total) => {
+    setStatus(`Fetching phone & website… ${done}/${total} listings checked.`, "working");
   });
   btn.disabled = false;
   refreshPills();
   chrome.storage.local.set({ lastLeads: allLeads });
-  setStatus("✅ Done — phone & website filled in where Google had them.");
-});
+  const noneListed = failed > 0 ? ` ${failed} had none listed on Google.` : "";
+  setStatus(
+    filled > 0
+      ? `✅ Filled phone/website for ${filled} lead${filled === 1 ? "" : "s"}.${noneListed}`
+      : "Finished, but none of those listings show a phone or website on Google.",
+    filled > 0 ? "" : "error"
+  );
+}
+
+$("enrich").addEventListener("click", () => runEnrich(getFilteredLeads()));
 
 $("docs").addEventListener("click", async () => {
   const leads = getFilteredLeads();
