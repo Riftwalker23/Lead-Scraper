@@ -5,8 +5,18 @@
   "description": "Scrape business leads (name, phone, website, rating, reviews, address) from Google Maps search results with smart filters, then copy to a Google Sheet in one click.",
   "permissions": ["scripting", "activeTab", "tabs", "clipboardWrite", "storage"],
   "host_permissions": [
-    "https://www.google.com/*",
-    "https://www.google.*/maps/*"
+    "https://www.google.com/maps/*",
+    "https://www.google.co.uk/maps/*",
+    "https://www.google.ca/maps/*",
+    "https://www.google.com.au/maps/*",
+    "https://www.google.co.in/maps/*",
+    "https://www.google.com.pk/maps/*",
+    "https://www.google.ae/maps/*",
+    "https://www.google.de/maps/*",
+    "https://www.google.fr/maps/*",
+    "https://www.google.es/maps/*",
+    "https://www.google.it/maps/*",
+    "https://www.google.com.br/maps/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -24,7 +34,20 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.google.*/maps/*"],
+      "matches": [
+        "https://www.google.com/maps/*",
+        "https://www.google.co.uk/maps/*",
+        "https://www.google.ca/maps/*",
+        "https://www.google.com.au/maps/*",
+        "https://www.google.co.in/maps/*",
+        "https://www.google.com.pk/maps/*",
+        "https://www.google.ae/maps/*",
+        "https://www.google.de/maps/*",
+        "https://www.google.fr/maps/*",
+        "https://www.google.es/maps/*",
+        "https://www.google.it/maps/*",
+        "https://www.google.com.br/maps/*"
+      ],
       "js": ["content.js"],
       "run_at": "document_idle"
     }
