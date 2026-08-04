@@ -200,11 +200,12 @@ async function copyLeads(leads) {
   }
 }
 
-// Injected into the freshly-opened Google Sheet to remind the user to paste.
-function pasteBanner(count) {
+// Injected into the freshly-opened Google Sheet/Doc to remind the user to paste.
+function pasteBanner(count, where) {
   if (document.getElementById("__lead_paste_banner")) return;
   const isMac = navigator.platform.toLowerCase().includes("mac");
   const combo = isMac ? "⌘ + V" : "Ctrl + V";
+  const target = where === "doc" ? "Click in the document" : "Click cell <b>A1</b>";
   const b = document.createElement("div");
   b.id = "__lead_paste_banner";
   b.innerHTML =
@@ -212,7 +213,9 @@ function pasteBanner(count) {
     '<div><div style="font-weight:700;font-size:14px;margin-bottom:2px">' +
     count +
     " leads copied to your clipboard</div>" +
-    '<div style="font-size:12.5px;opacity:.92">Click cell <b>A1</b> and press <b>' +
+    '<div style="font-size:12.5px;opacity:.92">' +
+    target +
+    " and press <b>" +
     combo +
     "</b> to paste them in.</div></div>" +
     '<div id="__lpb_close" style="margin-left:8px;cursor:pointer;font-size:18px;opacity:.8;padding:2px 6px">×</div>';
@@ -241,16 +244,56 @@ function pasteBanner(count) {
   setTimeout(close, 20000);
 }
 
-function showBannerWhenReady(tabId, count) {
+function showBannerWhenReady(tabId, count, where) {
   const listener = (id, info) => {
     if (id === tabId && info.status === "complete") {
       chrome.tabs.onUpdated.removeListener(listener);
       chrome.scripting
-        .executeScript({ target: { tabId }, func: pasteBanner, args: [count] })
+        .executeScript({
+          target: { tabId },
+          func: pasteBanner,
+          args: [count, where || "sheet"],
+        })
         .catch(() => {});
     }
   };
   chrome.tabs.onUpdated.addListener(listener);
+}
+
+// Copy leads as a rich HTML table (pastes as a real table in Docs/Sheets).
+function copyRichLeads(leads) {
+  const cell = (v) => `<td style="border:1px solid #ccc;padding:4px 8px">${esc(
+    v === null || v === undefined ? "" : v
+  )}</td>`;
+  const head = COLUMNS.map(
+    (c) =>
+      `<th style="border:1px solid #ccc;padding:4px 8px;background:#eef;text-align:left">${c[1]}</th>`
+  ).join("");
+  const rows = leads
+    .map((l) => `<tr>${COLUMNS.map((c) => cell(l[c[0]])).join("")}</tr>`)
+    .join("");
+  const table = document.createElement("table");
+  table.setAttribute("border", "1");
+  table.style.borderCollapse = "collapse";
+  table.innerHTML = `<thead><tr>${head}</tr></thead><tbody>${rows}</tbody>`;
+  table.style.position = "fixed";
+  table.style.left = "-9999px";
+  document.body.appendChild(table);
+
+  const range = document.createRange();
+  range.selectNode(table);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  let ok = false;
+  try {
+    ok = document.execCommand("copy");
+  } catch {
+    ok = false;
+  }
+  sel.removeAllRanges();
+  table.remove();
+  return ok;
 }
 
 // ---- Scrape flow ----------------------------------------------------------
@@ -362,7 +405,29 @@ $("sheet").addEventListener("click", async () => {
   // Open a brand-new Google Sheet and drop a reminder banner into it so the
   // user knows to press Ctrl+V (browsers don't allow auto-paste into Sheets).
   const tab = await chrome.tabs.create({ url: "https://sheets.new" });
-  showBannerWhenReady(tab.id, leads.length);
+  showBannerWhenReady(tab.id, leads.length, "sheet");
+});
+
+$("docs").addEventListener("click", async () => {
+  const leads = getFilteredLeads();
+  if (!leads.length) return setStatus("No leads match the filters.", "error");
+  // Rich copy so it pastes as a formatted table in the Doc.
+  const ok = copyRichLeads(leads) || (await copyLeads(leads));
+  if (!ok) {
+    setStatus("Copy failed — try Download CSV instead.", "error");
+    return;
+  }
+  const tab = await chrome.tabs.create({ url: "https://docs.new" });
+  showBannerWhenReady(tab.id, leads.length, "doc");
+});
+
+$("pdf").addEventListener("click", async () => {
+  const leads = getFilteredLeads();
+  if (!leads.length) return setStatus("No leads match the filters.", "error");
+  // Hand the leads to the print page via storage, then open it; it renders a
+  // table and opens the print dialog (choose "Save as PDF").
+  await chrome.storage.local.set({ printLeads: { leads } });
+  await chrome.tabs.create({ url: chrome.runtime.getURL("print.html") });
 });
 
 $("csv").addEventListener("click", () => {

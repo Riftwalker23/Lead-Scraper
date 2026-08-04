@@ -28,10 +28,13 @@ Perfect for agencies, freelancers, and sales teams doing local outreach
 - **Live preview list** — see the leads and their badges update as you toggle filters.
 - **Export options:**
   - 📋 **Copy** — data goes to your clipboard as tab-separated values (paste into any sheet)
-  - 📊 **Google Sheet** — copies the leads and opens a fresh sheet; a reminder
+  - 📊 **Google Sheets** — copies the leads and opens a fresh sheet; a reminder
     banner appears in the sheet — click cell **A1** and press **`Ctrl+V`**
-    (browsers don't allow extensions to auto-paste into Sheets, so this last
-    keystroke is on you)
+    (browsers don't allow extensions to auto-paste, so this last keystroke is on you)
+  - 📝 **Google Docs** — copies the leads as a formatted **table** and opens a new
+    Doc; click in it and press **`Ctrl+V`**
+  - 📄 **PDF** — opens a clean print-ready page and the print dialog; choose
+    **Save as PDF**
   - ⬇️ **Download CSV**
 - **▶ Try demo** — loads sample data so you can see the whole flow without opening Maps.
 
@@ -124,6 +127,8 @@ Lead-Scraper/
 ├── popup.css         # Popup styling
 ├── popup.js          # Popup logic: filters, export, demo, preview
 ├── content.js        # Runs on Google Maps: scrolls + scrapes each listing
+├── print.html        # Print-ready leads page for PDF export
+├── print.js          # Renders the table and opens the print dialog
 ├── make_icons.py     # (Dev only) regenerates the PNG icons, no dependencies
 └── icons/            # 16 / 48 / 128 px toolbar icons
 ```
