@@ -28,7 +28,10 @@ Perfect for agencies, freelancers, and sales teams doing local outreach
 - **Live preview list** — see the leads and their badges update as you toggle filters.
 - **Export options:**
   - 📋 **Copy** — data goes to your clipboard as tab-separated values (paste into any sheet)
-  - 📊 **Google Sheet** — opens a fresh sheet with the leads already copied; just press `Ctrl+V`
+  - 📊 **Google Sheet** — copies the leads and opens a fresh sheet; a reminder
+    banner appears in the sheet — click cell **A1** and press **`Ctrl+V`**
+    (browsers don't allow extensions to auto-paste into Sheets, so this last
+    keystroke is on you)
   - ⬇️ **Download CSV**
 - **▶ Try demo** — loads sample data so you can see the whole flow without opening Maps.
 

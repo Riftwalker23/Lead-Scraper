@@ -16,7 +16,8 @@
     "https://www.google.fr/maps/*",
     "https://www.google.es/maps/*",
     "https://www.google.it/maps/*",
-    "https://www.google.com.br/maps/*"
+    "https://www.google.com.br/maps/*",
+    "https://docs.google.com/*"
   ],
   "action": {
     "default_popup": "popup.html",

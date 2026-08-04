@@ -176,19 +176,81 @@ function refreshPills() {
 
 async function copyLeads(leads) {
   const tsv = toTSV(leads);
+  // execCommand on a focused textarea is the most reliable path inside an
+  // extension popup (works even when navigator.clipboard is blocked).
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = tsv;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    if (ok) return true;
+  } catch {
+    /* fall through */
+  }
   try {
     await navigator.clipboard.writeText(tsv);
     return true;
   } catch {
-    // Fallback via a hidden textarea.
-    const ta = document.createElement("textarea");
-    ta.value = tsv;
-    document.body.appendChild(ta);
-    ta.select();
-    const ok = document.execCommand("copy");
-    ta.remove();
-    return ok;
+    return false;
   }
+}
+
+// Injected into the freshly-opened Google Sheet to remind the user to paste.
+function pasteBanner(count) {
+  if (document.getElementById("__lead_paste_banner")) return;
+  const isMac = navigator.platform.toLowerCase().includes("mac");
+  const combo = isMac ? "⌘ + V" : "Ctrl + V";
+  const b = document.createElement("div");
+  b.id = "__lead_paste_banner";
+  b.innerHTML =
+    '<div style="font-size:22px;line-height:1">📋</div>' +
+    '<div><div style="font-weight:700;font-size:14px;margin-bottom:2px">' +
+    count +
+    " leads copied to your clipboard</div>" +
+    '<div style="font-size:12.5px;opacity:.92">Click cell <b>A1</b> and press <b>' +
+    combo +
+    "</b> to paste them in.</div></div>" +
+    '<div id="__lpb_close" style="margin-left:8px;cursor:pointer;font-size:18px;opacity:.8;padding:2px 6px">×</div>';
+  Object.assign(b.style, {
+    position: "fixed",
+    top: "16px",
+    left: "50%",
+    transform: "translateX(-50%)",
+    zIndex: "2147483647",
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    background: "linear-gradient(145deg,#2563eb,#1d4ed8)",
+    color: "#fff",
+    padding: "12px 16px",
+    borderRadius: "12px",
+    boxShadow: "0 8px 28px rgba(0,0,0,.35)",
+    fontFamily: "Segoe UI, Roboto, Arial, sans-serif",
+    maxWidth: "90vw",
+  });
+  document.body.appendChild(b);
+  const close = () => b.remove();
+  document.getElementById("__lpb_close").addEventListener("click", close);
+  // Dismiss automatically once the user actually pastes, or after 20s.
+  document.addEventListener("paste", () => setTimeout(close, 400), { once: true });
+  setTimeout(close, 20000);
+}
+
+function showBannerWhenReady(tabId, count) {
+  const listener = (id, info) => {
+    if (id === tabId && info.status === "complete") {
+      chrome.tabs.onUpdated.removeListener(listener);
+      chrome.scripting
+        .executeScript({ target: { tabId }, func: pasteBanner, args: [count] })
+        .catch(() => {});
+    }
+  };
+  chrome.tabs.onUpdated.addListener(listener);
 }
 
 // ---- Scrape flow ----------------------------------------------------------
@@ -293,14 +355,14 @@ $("sheet").addEventListener("click", async () => {
   const leads = getFilteredLeads();
   if (!leads.length) return setStatus("No leads match the filters.", "error");
   const ok = await copyLeads(leads);
-  // Opens a brand-new Google Sheet, ready for Ctrl+V in A1.
-  await chrome.tabs.create({ url: "https://sheets.new" });
-  setStatus(
-    ok
-      ? `Copied ${leads.length} leads. In the new Sheet, click A1 and press Ctrl+V.`
-      : "Opened Sheet, but copy failed — use Download CSV then File → Import.",
-    ok ? "" : "error"
-  );
+  if (!ok) {
+    setStatus("Copy failed — use Download CSV, then File → Import in Sheets.", "error");
+    return;
+  }
+  // Open a brand-new Google Sheet and drop a reminder banner into it so the
+  // user knows to press Ctrl+V (browsers don't allow auto-paste into Sheets).
+  const tab = await chrome.tabs.create({ url: "https://sheets.new" });
+  showBannerWhenReady(tab.id, leads.length);
 });
 
 $("csv").addEventListener("click", () => {
