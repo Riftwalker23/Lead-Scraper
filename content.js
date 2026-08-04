@@ -141,20 +141,26 @@
     return "";
   }
 
+  // The card info lives in nested .W4Efsd blocks. The "leaf" blocks (those
+  // with no .W4Efsd descendant) are the individual lines: the rating line,
+  // the "category · address" line, and the hours line.
+  function leafInfoRows(card) {
+    return Array.from(card.querySelectorAll(".W4Efsd")).filter(
+      (r) => !r.querySelector(".W4Efsd")
+    );
+  }
+
+  const HOURS_RE = /^(open|closed|closes|opens|temporarily|permanently|24 hours)/i;
+
   function extractOpenStatus(card) {
-    // Google shows hours as e.g. "Open ⋅ Closes 11 PM", "Closed ⋅ Opens 9 AM",
-    // "Open 24 hours", "Temporarily closed". The leading word is the state.
-    // The open/closed word lives in a colored span inside a .W4Efsd row.
-    const rows = Array.from(card.querySelectorAll("div.W4Efsd, span.W4Efsd"));
+    // Hours line, e.g. "Open · Closes 1 AM", "Closes soon · 11 PM · Opens 7 AM",
+    // "Open 24 hours", "Closed · Opens 6 AM", "Temporarily closed".
     let status = "";
-    for (const row of rows) {
+    for (const row of leafInfoRows(card)) {
+      if (row.querySelector("span.MW4etd")) continue; // rating line
       const t = textOf(row).replace(/\s+/g, " ");
-      if (/\b(open|closed|opens|closes|24 hours)\b/i.test(t)) {
-        // Trim to just the hours segment if the row also holds category/address.
-        const m = t.match(
-          /(Open 24 hours|Temporarily closed|Permanently closed|Open|Closed|Opens[^·⋅|]*|Closes[^·⋅|]*)(?:\s*[·⋅|]\s*(Opens|Closes)[^·⋅|]*)?/i
-        );
-        status = (m ? m[0] : t).trim();
+      if (HOURS_RE.test(t)) {
+        status = t;
         break;
       }
     }
@@ -182,26 +188,25 @@
   }
 
   function extractCategoryAddress(card) {
-    // The .W4Efsd rows hold category · rating and category · address · phone
-    const rows = Array.from(card.querySelectorAll("div.W4Efsd"));
-    let category = "";
-    let address = "";
-    for (const row of rows) {
-      const spans = Array.from(row.querySelectorAll("span")).filter(
-        (s) => textOf(s) && textOf(s) !== "·"
-      );
-      const parts = spans.map(textOf);
-      for (const p of parts) {
-        if (!p || p === "·") continue;
-        // Address usually contains digits or a street-ish word.
-        if (!category && /^[A-Za-z][A-Za-z &/'-]+$/.test(p) && p.length < 40) {
-          category = p;
-        } else if (!address && /\d|st\b|road|rd\b|ave|block|phase/i.test(p)) {
-          address = p;
-        }
+    // The "category · address" line, e.g. "Gym ·  · 2 K 1/3, near ... Rd"
+    // (the empty middle piece is an accessibility icon). We split on the dot
+    // separator: first piece = category, last piece = address.
+    for (const row of leafInfoRows(card)) {
+      if (row.querySelector("span.MW4etd")) continue; // rating line
+      const t = textOf(row).replace(/\s+/g, " ");
+      if (!t || HOURS_RE.test(t)) continue; // hours line
+      const parts = t
+        .split(/[·⋅|]/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (parts.length) {
+        return {
+          category: parts[0] || "",
+          address: parts.length > 1 ? parts[parts.length - 1] : "",
+        };
       }
     }
-    return { category, address };
+    return { category: "", address: "" };
   }
 
   function scrapeAll() {

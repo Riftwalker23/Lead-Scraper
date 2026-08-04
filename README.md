@@ -15,7 +15,12 @@ Perfect for agencies, freelancers, and sales teams doing local outreach
 ## ✨ Features
 
 - **One-click scraping** of every business in the current Maps search — it
-  auto-scrolls the results panel to load them all.
+  auto-scrolls the results panel to load them all (name, rating, reviews,
+  category, address, open/closed status).
+- **📞 Get phone & website** — Google doesn't show phone numbers or websites in
+  the results list, only on each business's own page. This button briefly opens
+  your **filtered** leads in the background and pulls their phone + website, so
+  you only fetch the ones you actually want.
 - **10 smart filters:**
   - Has phone number
   - Has website
@@ -94,7 +99,11 @@ so its 📍 icon stays visible.
 4. Click **Scrape leads**. It scrolls the whole list and collects every business
    (large searches can take 20–60 seconds).
 5. Review the **live preview** and counts. Adjust filters — the list updates instantly.
-6. Export:
+6. *(Optional)* Click **📞 Get phone & website** to fetch those two fields for the
+   currently filtered leads. It opens each listing in a background tab for a
+   moment — **keep the popup open** while it runs. (Filter first so you only
+   fetch the leads you care about — it's much faster.)
+7. Export:
    - **Copy**, then paste into any spreadsheet, **or**
    - **Google Sheet** → in the new sheet, click cell **A1** and press **`Ctrl+V`**, **or**
    - **Download CSV**.
@@ -139,8 +148,12 @@ Lead-Scraper/
 
 - **"No results feed found"** — Make sure you ran a search on `google.com/maps`
   and the list of businesses is visible **before** clicking Scrape.
-- **Some fields are blank** — Google only shows a phone/website/hours on a card
-  when the business has published them. No data on the card = blank cell.
+- **Phone / Website columns are blank after scraping** — that's expected: Google
+  doesn't put them in the results list. Click **📞 Get phone & website** to fetch
+  them. Anything still blank means the business hasn't published it.
+- **"Get phone & website" seems slow** — it opens each listing in a background tab
+  to read the real number/site, ~1–2s each. Filter your list down first, then
+  enrich only those leads.
 - **Nothing scrapes / it broke after a while** — Google Maps periodically changes
   its page structure. The selectors live in `content.js`; they use layered
   fallbacks, but a future Maps update may need a tweak there.

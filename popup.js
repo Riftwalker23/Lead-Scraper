@@ -260,6 +260,90 @@ function showBannerWhenReady(tabId, count, where) {
   chrome.tabs.onUpdated.addListener(listener);
 }
 
+// ---- Enrichment (phone + website from each place's detail page) -----------
+
+// Injected into a place tab; polls for the detail panel's stable data-item-id
+// elements and returns phone / website / address / category.
+function scrapePlaceInTab() {
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const clean = (s) => (s || "").replace(/^[^:]*:\s*/, "").trim();
+    const tick = () => {
+      const p = document.querySelector('button[data-item-id^="phone:tel:"]');
+      const w = document.querySelector('a[data-item-id="authority"]');
+      const a = document.querySelector('button[data-item-id="address"]');
+      const cat = document.querySelector('button[jsaction*="category"]');
+      if (a || p || w || Date.now() - start > 10000) {
+        resolve({
+          phone: p ? clean(p.getAttribute("aria-label")) : "",
+          website: w ? w.href : "",
+          address: a ? clean(a.getAttribute("aria-label")) : "",
+          category: cat ? cat.textContent.trim() : "",
+        });
+        return;
+      }
+      setTimeout(tick, 300);
+    };
+    tick();
+  });
+}
+
+function waitForTabComplete(tabId, timeout) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      chrome.tabs.onUpdated.removeListener(listener);
+      resolve();
+    };
+    const listener = (id, info) => {
+      if (id === tabId && info.status === "complete") finish();
+    };
+    chrome.tabs.onUpdated.addListener(listener);
+    setTimeout(finish, timeout);
+  });
+}
+
+async function enrichLeads(leads, onProgress) {
+  const queue = leads.filter(
+    (l) => /\/maps\/place\//.test(l.mapsUrl || "") && (!l.phone || !l.website)
+  );
+  const total = queue.length;
+  if (!total) return { total: 0 };
+  let done = 0;
+  const concurrency = Math.min(3, total);
+
+  async function worker() {
+    while (queue.length) {
+      const lead = queue.shift();
+      try {
+        const tab = await chrome.tabs.create({ url: lead.mapsUrl, active: false });
+        await waitForTabComplete(tab.id, 15000);
+        const res = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: scrapePlaceInTab,
+        });
+        const data = res && res[0] && res[0].result;
+        if (data) {
+          if (data.phone) lead.phone = data.phone;
+          if (data.website) lead.website = data.website;
+          if (data.address) lead.address = data.address;
+          if (data.category && !lead.category) lead.category = data.category;
+        }
+        await chrome.tabs.remove(tab.id).catch(() => {});
+      } catch (e) {
+        /* skip this lead */
+      }
+      done++;
+      if (onProgress) onProgress(done, total);
+    }
+  }
+
+  await Promise.all(Array.from({ length: concurrency }, worker));
+  return { total };
+}
+
 // Copy leads as a rich HTML table (pastes as a real table in Docs/Sheets).
 function copyRichLeads(leads) {
   const cell = (v) => `<td style="border:1px solid #ccc;padding:4px 8px">${esc(
@@ -406,6 +490,30 @@ $("sheet").addEventListener("click", async () => {
   // user knows to press Ctrl+V (browsers don't allow auto-paste into Sheets).
   const tab = await chrome.tabs.create({ url: "https://sheets.new" });
   showBannerWhenReady(tab.id, leads.length, "sheet");
+});
+
+$("enrich").addEventListener("click", async () => {
+  const leads = getFilteredLeads();
+  const todo = leads.filter(
+    (l) => /\/maps\/place\//.test(l.mapsUrl || "") && (!l.phone || !l.website)
+  );
+  if (!todo.length) {
+    setStatus("These leads already have phone & website (or no Maps link).");
+    return;
+  }
+  const btn = $("enrich");
+  btn.disabled = true;
+  setStatus(
+    `Fetching phone & website for ${todo.length} leads… opening listings in the background. Keep this popup open.`,
+    "working"
+  );
+  await enrichLeads(leads, (done, total) => {
+    setStatus(`Fetching phone & website… ${done}/${total} done.`, "working");
+  });
+  btn.disabled = false;
+  refreshPills();
+  chrome.storage.local.set({ lastLeads: allLeads });
+  setStatus("✅ Done — phone & website filled in where Google had them.");
 });
 
 $("docs").addEventListener("click", async () => {
