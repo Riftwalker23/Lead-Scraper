@@ -2,7 +2,7 @@
 
 Scrape business leads straight from **Google Maps search results** — name, phone,
 website, rating, reviews, category, address and open/closed status — then filter
-them and export to a **Google Sheet, clipboard, or CSV** in one click.
+them and export to **Google Docs, PDF, clipboard, or CSV** in one click.
 
 Perfect for agencies, freelancers, and sales teams doing local outreach
 (e.g. *"gyms in Karachi"*, *"dentists in London"*, *"restaurants near me"*).
@@ -33,9 +33,6 @@ Perfect for agencies, freelancers, and sales teams doing local outreach
 - **Live preview list** — see the leads and their badges update as you toggle filters.
 - **Export options:**
   - 📋 **Copy** — data goes to your clipboard as tab-separated values (paste into any sheet)
-  - 📊 **Google Sheets** — copies the leads and opens a fresh sheet; a reminder
-    banner appears in the sheet — click cell **A1** and press **`Ctrl+V`**
-    (browsers don't allow extensions to auto-paste, so this last keystroke is on you)
   - 📝 **Google Docs** — copies the leads as a formatted **table** and opens a new
     Doc; click in it and press **`Ctrl+V`**
   - 📄 **PDF** — opens a clean print-ready page and the print dialog; choose
@@ -105,7 +102,8 @@ so its 📍 icon stays visible.
    fetch the leads you care about — it's much faster.)
 7. Export:
    - **Copy**, then paste into any spreadsheet, **or**
-   - **Google Sheet** → in the new sheet, click cell **A1** and press **`Ctrl+V`**, **or**
+   - **Google Docs** → click in the new doc and press **`Ctrl+V`**, **or**
+   - **PDF** (Save as PDF from the print dialog), **or**
    - **Download CSV**.
 
 Want to see it before running a real search? Click **▶ Try demo** in the popup.

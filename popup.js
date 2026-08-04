@@ -478,20 +478,6 @@ $("copy").addEventListener("click", async () => {
   );
 });
 
-$("sheet").addEventListener("click", async () => {
-  const leads = getFilteredLeads();
-  if (!leads.length) return setStatus("No leads match the filters.", "error");
-  const ok = await copyLeads(leads);
-  if (!ok) {
-    setStatus("Copy failed — use Download CSV, then File → Import in Sheets.", "error");
-    return;
-  }
-  // Open a brand-new Google Sheet and drop a reminder banner into it so the
-  // user knows to press Ctrl+V (browsers don't allow auto-paste into Sheets).
-  const tab = await chrome.tabs.create({ url: "https://sheets.new" });
-  showBannerWhenReady(tab.id, leads.length, "sheet");
-});
-
 $("enrich").addEventListener("click", async () => {
   const leads = getFilteredLeads();
   const todo = leads.filter(
